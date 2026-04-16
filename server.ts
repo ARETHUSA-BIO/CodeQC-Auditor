@@ -1,3 +1,8 @@
+import process from "process";
+import * as dotenv from "dotenv";
+
+dotenv.config();
+
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -12,6 +17,15 @@ async function startServer() {
   const PORT = process.env.PORT || 3000;
 
   app.use(express.json());
+
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      hasKey: !!process.env.GEMINI_API_KEY, 
+      keyLength: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0,
+      theKey: process.env.GEMINI_API_KEY
+    });
+  });
 
   // Mount API paths
   app.post("/api/analyze", analyzeHandler);

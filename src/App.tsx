@@ -36,9 +36,9 @@ export default function App() {
     try {
       const data = await analysisCode(code);
       setResult(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Analysis failed. Please check your script and try again.');
+      setError(err.message || 'Analysis failed. Please check your script and try again.');
     } finally {
       setIsAnalyzing(false);
     }

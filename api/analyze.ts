@@ -1,20 +1,28 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { Request, Response } from "express";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).json({ message: 'Method Not Allowed' });
     return;
   }
 
-  const { code } = req.body;
+  const code = req.body && req.body.code ? req.body.code : null;
   if (!code) {
     res.status(400).json({ message: 'Code is required' });
     return;
   }
 
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+    console.error("Gemini Error: Invalid API Key Detected");
+    res.status(400).json({ error: "Invalid API Key: Please update your GEMINI_API_KEY secret in AI Studio settings or Vercel Environment Variables. Currently it is set to the default placeholder." });
+    return;
+  }
+
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+    const ai = new GoogleGenAI({ apiKey });
     
     const prompt = `Perform a deep quality control (QC) and functional audit on the following Python/Colab code. 
   Assess logic correctness, potential security vulnerabilities, performance bottlenecks, and adherence to best practices.
@@ -61,7 +69,9 @@ export default async function handler(req: Request, res: Response) {
       }
     });
 
-    const text = response.text || "{}";
+    let text = response.text || "{}";
+    // Strip markdown formatting if the model leaked it
+    text = text.replace(/^```json/i, '').replace(/```$/i, '').trim();
     const result = JSON.parse(text);
     
     res.status(200).json(result);
