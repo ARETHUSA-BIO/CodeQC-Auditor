@@ -1,7 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-
 export interface QCIssue {
   type: "error" | "warning" | "suggestion";
   title: string;
@@ -18,51 +14,25 @@ export interface QCResult {
 }
 
 export async function analysisCode(code: string): Promise<QCResult> {
-  const prompt = `Perform a deep quality control (QC) and functional audit on the following Python/Colab code. 
-  Assess logic correctness, potential security vulnerabilities, performance bottlenecks, and adherence to best practices.
-  
-  Provide a structured response.
-  
-  Code to analyze:
-  \`\`\`python
-  ${code}
-  \`\`\``;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          summary: { type: Type.STRING, description: "A concise overview of the code quality." },
-          score: { type: Type.NUMBER, description: "A general quality score from 0 to 100." },
-          suggestedOptimizations: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "A list of high-level optimization suggestions."
-          },
-          issues: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                type: { type: Type.STRING, enum: ["error", "warning", "suggestion"] },
-                title: { type: Type.STRING },
-                description: { type: Type.STRING },
-                codeSnippet: { type: Type.STRING },
-                fix: { type: Type.STRING }
-              },
-              required: ["type", "title", "description"]
-            }
-          }
-        },
-        required: ["summary", "score", "issues", "suggestedOptimizations"]
-      }
-    }
+  const response = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ code }),
   });
 
-  const text = response.text || "{}";
-  return JSON.parse(text) as QCResult;
+  if (!response.ok) {
+    let errorMsg = 'Analysis failed due to a server error.';
+    try {
+      const errorData = await response.json();
+      if (errorData.error) errorMsg = errorData.error;
+    } catch (e) {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return response.json();
 }
+
