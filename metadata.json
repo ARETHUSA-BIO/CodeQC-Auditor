@@ -1,0 +1,6 @@
+{
+  "name": "CodeQC Auditor",
+  "description": "Professional quality control and logic testing for Colab scripts and Python code using Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
